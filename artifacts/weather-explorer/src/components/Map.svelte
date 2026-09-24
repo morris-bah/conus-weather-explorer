@@ -20,6 +20,17 @@
   let citiesLastUpdated = $state<string | null>(null);
   let radarLoadError = $state<string | null>(null);
   let isLoadingCities = $state(false);
+  let selectedWeatherError = $state<string | null>(null);
+  let mapZoom = $state(3);
+  const detailedMarkers: { marker: L.Marker; layer: L.LayerGroup }[] = [];
+  function updateDetailedMarkers() {
+    if (!map) return;
+    mapZoom = map.getZoom();
+    for (const { marker, layer } of detailedMarkers) {
+      if (mapZoom >= 6) layer.addLayer(marker);
+      else layer.removeLayer(marker);
+    }
+  }
   
   // RainViewer logic
   let radarTimestamps: any[] = $state([]);
@@ -47,6 +58,8 @@
     windLayerGroup = L.layerGroup();
     radarLayerGroup = L.layerGroup();
     cloudLayerGroup = L.layerGroup();
+    updateDetailedMarkers();
+    map.on('zoomend', updateDetailedMarkers);
     
     map.on('click', async (e: L.LeafletMouseEvent) => {
       const { lat, lng } = e.latlng;
@@ -81,6 +94,7 @@
   });
   
   onDestroy(() => {
+    mapReady = false;
     if (radarAnimationInterval) clearInterval(radarAnimationInterval);
     if (map) map.remove();
   });
@@ -131,11 +145,33 @@
     try {
       const data = await getCitiesCurrentWeather(lats, lons);
       
+      if (!mapReady) return;
       SAMPLE_CITIES.forEach((city, i) => {
         const cityData = Array.isArray(data) ? data[i] : data; 
         
         if (cityData && cityData.current) {
-          const temp = cityData.current.temperature_2m;
+          addWeatherMarkers(city, cityData.current, i >= 27);
+        }
+      });
+      citiesLastUpdated = new Date().toLocaleTimeString();
+    } catch (e: any) {
+      console.error("Failed to load cities data", e);
+      citiesLoadError = "Failed to load city data.";
+    } finally {
+      isLoadingCities = false;
+    }
+  }
+
+  function addWeatherMarkers(
+    city: { name: string; lat: number; lon: number },
+    current: { temperature_2m: number; cloud_cover: number; wind_direction_10m: number; wind_speed_10m: number },
+    detailed = false
+  ) {
+          // Names can come from search or chat; never interpolate raw HTML.
+          const label = document.createElement('span');
+          label.textContent = city.name;
+          const safeName = label.innerHTML;
+          const temp = current.temperature_2m;
           const color = getColorForTemperature(temp);
           
           const iconHtml = `
@@ -143,7 +179,7 @@
               <span class="text-white font-bold text-xs shadow-sm">${Math.round(temp)}°</span>
             </div>
             <div class="text-[10px] font-bold text-white uppercase tracking-wider mt-1 text-center bg-slate-900/50 rounded px-1 w-max -ml-2 backdrop-blur">
-              ${city.name}
+              ${safeName}
             </div>
           `;
           
@@ -152,10 +188,10 @@
             className: 'bg-transparent',
             iconSize: [0, 0]
           });
-          L.marker([city.lat, city.lon], { icon }).addTo(cityLayerGroup!);
+          const temperatureMarker = L.marker([city.lat, city.lon], { icon, title: city.name }).addTo(cityLayerGroup!);
           
           // Cloud Cover marker
-          const cloudCover = cityData.current.cloud_cover;
+          const cloudCover = current.cloud_cover;
           const cloudHtml = `
             <div class="flex flex-col items-center justify-center -ml-4 -mt-4 w-10 h-10 rounded-full border border-slate-700 bg-slate-800/90 shadow-lg backdrop-blur">
               <span class="text-slate-300 font-bold text-xs">${cloudCover}%</span>
@@ -169,11 +205,11 @@
             className: 'bg-transparent',
             iconSize: [0, 0]
           });
-          L.marker([city.lat, city.lon], { icon: cloudIcon }).addTo(cloudLayerGroup!);
+          const cloudMarker = L.marker([city.lat, city.lon], { icon: cloudIcon, title: city.name }).addTo(cloudLayerGroup!);
           
           // Wind Arrow marker
-          const windDir = cityData.current.wind_direction_10m;
-          const windSpeed = cityData.current.wind_speed_10m;
+          const windDir = current.wind_direction_10m;
+          const windSpeed = current.wind_speed_10m;
           const windHtml = `
             <div class="flex items-center justify-center -ml-4 -mt-4 w-8 h-8 rounded-full border border-slate-700 bg-slate-900/80 shadow-lg backdrop-blur" style="transform: rotate(${windDir}deg);">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-teal-400"><path d="M12 2v20"/><path d="m17 7-5-5-5 5"/></svg>
@@ -187,17 +223,47 @@
             className: 'bg-transparent',
             iconSize: [0, 0]
           });
-          L.marker([city.lat, city.lon], { icon: windIcon }).addTo(windLayerGroup!);
-        }
-      });
-      citiesLastUpdated = new Date().toLocaleTimeString();
-    } catch (e: any) {
-      console.error("Failed to load cities data", e);
-      citiesLoadError = "Failed to load city data.";
-    } finally {
-      isLoadingCities = false;
-    }
+          const windMarker = L.marker([city.lat, city.lon], { icon: windIcon, title: city.name }).addTo(windLayerGroup!);
+          if (detailed) {
+            detailedMarkers.push(
+              { marker: temperatureMarker, layer: cityLayerGroup! },
+              { marker: cloudMarker, layer: cloudLayerGroup! },
+              { marker: windMarker, layer: windLayerGroup! }
+            );
+            updateDetailedMarkers();
+          }
+          return () => {
+            cityLayerGroup?.removeLayer(temperatureMarker);
+            cloudLayerGroup?.removeLayer(cloudMarker);
+            windLayerGroup?.removeLayer(windMarker);
+          };
   }
+
+  $effect(() => {
+    const location = appState.selectedLocation;
+    if (!mapReady || !location) return;
+    let cancelled = false;
+    let removeMarkers: (() => void) | undefined;
+    selectedWeatherError = null;
+    // Preset cities already have markers, unless their initial request failed.
+    const alreadyShown = !citiesLoadError && !isLoadingCities && citiesLastUpdated &&
+      SAMPLE_CITIES.some((city, index) => (index < 27 || mapZoom >= 6) && Math.abs(city.lat - location.latitude) < 0.03 &&
+        Math.abs(city.lon - location.longitude) < 0.03);
+    if (alreadyShown) return;
+    getCitiesCurrentWeather([location.latitude], [location.longitude])
+      .then(data => {
+        if (cancelled) return;
+        const weather = Array.isArray(data) ? data[0] : data;
+        if (!weather?.current) throw new Error('No current weather returned');
+        removeMarkers = addWeatherMarkers({
+          name: location.name, lat: location.latitude, lon: location.longitude
+        }, weather.current);
+      })
+      .catch(() => {
+        if (!cancelled) selectedWeatherError = `Could not load map weather for ${location.name}. Select the location again to retry.`;
+      });
+    return () => { cancelled = true; removeMarkers?.(); };
+  });
   
   async function initRadar() {
     radarLoadError = null;
@@ -279,6 +345,11 @@
   {/if}
   
   <div class="absolute top-4 right-4 flex flex-col items-end gap-2 z-[400] pointer-events-none">
+    {#if selectedWeatherError}
+      <div role="alert" class="max-w-xs bg-red-900/80 px-3 py-1.5 rounded text-xs text-red-200">
+        {selectedWeatherError}
+      </div>
+    {/if}
     {#if citiesLoadError}
       <div class="bg-red-900/80 backdrop-blur px-3 py-1.5 rounded border border-red-700 shadow-xl text-xs text-red-200">
         Cities: {citiesLoadError}
@@ -293,6 +364,11 @@
       <div class="bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded border border-slate-700 shadow-xl text-xs text-slate-400">
         City Data: {citiesLastUpdated}
       </div>
+      {#if mapZoom < 6}
+        <div class="bg-slate-900/80 px-3 py-1.5 rounded text-xs text-slate-300">
+          Zoom in or select a location for more city weather.
+        </div>
+      {/if}
     {/if}
   </div>
   
