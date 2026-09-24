@@ -1,0 +1,1 @@
+- [Weather tooling and tiles](weather-platform.md) — template compatibility and basemap service constraints to check when upgrading.

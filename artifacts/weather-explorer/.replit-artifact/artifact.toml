@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CONUS Weather Explorer"
+description = "Svelte weather map and location-aware AI weather chat for the contiguous United States, with local VS Code development support."
+version = "1.0.0"
+id = "artifacts/weather-explorer"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18323
+
+[services.development]
+run = "pnpm --filter @workspace/weather-explorer run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/weather-explorer", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/weather-explorer/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18323"
+BASE_PATH = "/"

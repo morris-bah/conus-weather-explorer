@@ -11,6 +11,22 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /weather/chat:
+    post:
+      operationId: weatherChat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WeatherChatInput"
+      responses:
+        "200":
+          description: Grounded weather answer and optional map destination
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeatherChatResult"
   /healthz:
     get:
       operationId: healthCheck
@@ -26,6 +42,41 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    WeatherChatInput:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string, minLength: 1, maxLength: 2000 }
+        location:
+          $ref: "#/components/schemas/WeatherLocation"
+        history:
+          type: array
+          maxItems: 12
+          items:
+            $ref: "#/components/schemas/ChatTurn"
+    ChatTurn:
+      type: object
+      required: [role, content]
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string, maxLength: 6000 }
+    WeatherLocation:
+      type: object
+      required: [name, latitude, longitude]
+      properties:
+        name: { type: string }
+        latitude: { type: number, minimum: 24, maximum: 50 }
+        longitude: { type: number, minimum: -125, maximum: -66 }
+    WeatherChatResult:
+      type: object
+      required: [answer, sources]
+      properties:
+        answer: { type: string }
+        location:
+          $ref: "#/components/schemas/WeatherLocation"
+        sources:
+          type: array
+          items: { type: string }
     HealthStatus:
       type: object
       properties:

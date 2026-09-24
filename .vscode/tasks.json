@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Weather: frontend",
+      "type": "shell",
+      "command": "pnpm --filter @workspace/weather-explorer run dev",
+      "options": { "env": { "LOCAL_DEV": "1", "PORT": "5173", "BASE_PATH": "/" } },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Weather: API",
+      "type": "shell",
+      "command": "pnpm --filter @workspace/api-server run dev:local",
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Weather: start development",
+      "dependsOn": ["Weather: API", "Weather: frontend"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}
