@@ -1,0 +1,2 @@
+const base = import.meta.env.BASE_URL;
+export default function Slide1(){ return <main className="w-screen h-screen overflow-hidden relative deck-slide cover"><img src={`${base}weather-hero.jpg`} crossOrigin="anonymous" alt="Clouds over the American Great Plains" className="hero-image"/><div className="hero-shade"/><div className="cover-copy"><h1>CONUS Weather Explorer</h1><p>Interactive weather maps and location-aware AI chat—built with Svelte.</p></div><footer><span>CONUS WEATHER EXPLORER</span><span>01 / 08</span></footer></main>; }

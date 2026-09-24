@@ -4,6 +4,51 @@
   import Chat from './components/Chat.svelte';
   import { appState } from './lib/store.svelte';
   import { MessageSquare, Map as MapIcon, X } from '@lucide/svelte';
+  import { onMount } from 'svelte';
+  import PanelDivider from './components/PanelDivider.svelte';
+
+  let weatherWidth = $state(320);
+  let chatWidth = $state(340);
+  let viewportWidth = $state(1280);
+  let mapPanel: HTMLDivElement;
+  const minimumPanel = 220;
+  const minimumMap = 240;
+  const dividersWidth = 16;
+  let weatherMaximum = $derived(Math.max(minimumPanel, viewportWidth - chatWidth - minimumMap - dividersWidth));
+  let chatMaximum = $derived(Math.max(minimumPanel, viewportWidth - weatherWidth - minimumMap - dividersWidth));
+  function resizeWeather(width: number) {
+    weatherWidth = Math.min(weatherMaximum, Math.max(minimumPanel, width));
+  }
+  function resizeChat(width: number) {
+    chatWidth = Math.min(chatMaximum, Math.max(minimumPanel, width));
+  }
+  onMount(() => {
+    function fitPanels() {
+      viewportWidth = window.innerWidth;
+      if (viewportWidth < 768) return;
+      const available = viewportWidth - minimumMap - dividersWidth;
+      if (weatherWidth + chatWidth > available) {
+        const extra = available - minimumPanel * 2;
+        const ratio = (weatherWidth - minimumPanel) / (weatherWidth + chatWidth - minimumPanel * 2 || 1);
+        weatherWidth = minimumPanel + extra * ratio;
+        chatWidth = available - weatherWidth;
+      }
+    }
+    fitPanels();
+    window.addEventListener('resize', fitPanels);
+    // Leaflet must recalculate its canvas when either panel changes size.
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => appState.mapInstance?.invalidateSize({ pan: false, debounceMoveend: true }));
+    });
+    observer.observe(mapPanel);
+    return () => {
+      window.removeEventListener('resize', fitPanels);
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  });
 
   // For mobile view toggles
   let showChatMobile = $state(false);
@@ -35,9 +80,10 @@
   </div>
 
   <!-- Left Sidebar (Search, layers, forecast) -->
-  <div class="
+  <div id="weather-panel" style:--panel-width={`${weatherWidth}px`} class="
+    resizable-panel shrink-0 min-w-0
     absolute md:relative z-40 md:z-10
-    w-full md:w-80 lg:w-96 
+    w-full
     h-[calc(100%-53px)] md:h-full
     transition-transform duration-300 ease-in-out
     {showSidebarMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -53,15 +99,20 @@
     {/if}
   </div>
 
+  <PanelDivider label="Resize weather data panel" controls="weather-panel" value={weatherWidth} maximum={weatherMaximum} onresize={resizeWeather} />
+
   <!-- Center Map -->
-  <div class="flex-1 relative z-0 h-[calc(100%-53px)] md:h-full">
+  <div bind:this={mapPanel} class="flex-1 min-w-0 relative z-0 h-[calc(100%-53px)] md:h-full">
     <MapComponent />
   </div>
 
+  <PanelDivider label="Resize chat panel" controls="chat-panel" value={chatWidth} maximum={chatMaximum} direction={-1} onresize={resizeChat} />
+
   <!-- Right Sidebar (Chat) -->
-  <div class="
+  <div id="chat-panel" style:--panel-width={`${chatWidth}px`} class="
+    resizable-panel shrink-0 min-w-0
     absolute md:relative z-40 md:z-10 right-0
-    w-full md:w-80 lg:w-[400px] 
+    w-full
     h-[calc(100%-53px)] md:h-full
     transition-transform duration-300 ease-in-out
     {showChatMobile ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
@@ -77,3 +128,9 @@
     {/if}
   </div>
 </div>
+
+<style>
+  @media (min-width:768px) {
+    .resizable-panel { width:var(--panel-width); }
+  }
+</style>

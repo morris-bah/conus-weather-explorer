@@ -1,0 +1,66 @@
+[
+  {
+    "id": "8bf75431-485e-4d75-945b-ab9ca71739a2",
+    "position": 1,
+    "filepath": "src/pages/slides/Slide1.tsx",
+    "title": "CONUS Weather Explorer",
+    "description": "CONUS Weather Explorer",
+    "speakerNotes": ""
+  },
+  {
+    "id": "c6db9372-c072-429c-9703-6182d7c4e6d6",
+    "position": 2,
+    "filepath": "src/pages/slides/Slide2.tsx",
+    "title": "Explore weather without leaving the map",
+    "description": "Explore weather without leaving the map",
+    "speakerNotes": ""
+  },
+  {
+    "id": "18dc04a7-570a-4db6-9de7-0785f0fcbc09",
+    "position": 3,
+    "filepath": "src/pages/slides/Slide3.tsx",
+    "title": "Four ways to view the weather",
+    "description": "Four ways to view the weather",
+    "speakerNotes": ""
+  },
+  {
+    "id": "6dbc1317-00b8-478d-a269-5e2567779302",
+    "position": 4,
+    "filepath": "src/pages/slides/Slide4.tsx",
+    "title": "A conversation that moves the map",
+    "description": "A conversation that moves the map",
+    "speakerNotes": ""
+  },
+  {
+    "id": "1de278b3-4c24-4ea2-b24f-3fb643ea7ea8",
+    "position": 5,
+    "filepath": "src/pages/slides/Slide5.tsx",
+    "title": "Real sources, clear limitations",
+    "description": "Real sources, clear limitations",
+    "speakerNotes": ""
+  },
+  {
+    "id": "07031a2d-5bf6-4625-95da-f12da1b0471c",
+    "position": 6,
+    "filepath": "src/pages/slides/Slide6.tsx",
+    "title": "A Svelte frontend with an Express backend",
+    "description": "A Svelte frontend with an Express backend",
+    "speakerNotes": ""
+  },
+  {
+    "id": "25be7af5-6320-4780-a0ed-7568b44d90f4",
+    "position": 7,
+    "filepath": "src/pages/slides/Slide7.tsx",
+    "title": "Ready for VS Code development",
+    "description": "Ready for VS Code development",
+    "speakerNotes": ""
+  },
+  {
+    "id": "8c7330a9-6da1-4289-bbdd-9b34a1fe9962",
+    "position": 8,
+    "filepath": "src/pages/slides/Slide8.tsx",
+    "title": "A working foundation for further development",
+    "description": "A working foundation for further development",
+    "speakerNotes": ""
+  }
+]

@@ -1,0 +1,28 @@
+kind = "slides"
+previewPath = "/weather-project-deck/"
+title = "CONUS Weather Explorer — Project Overview"
+description = "Eight-slide overview of the CONUS Weather Explorer, covering map layers, AI chat, architecture, VS Code development and future opportunities."
+version = "1.0.0"
+id = "artifacts/weather-project-deck"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/weather-project-deck/" ]
+localPort = 26142
+
+[services.development]
+run = "pnpm --filter @workspace/weather-project-deck run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/weather-project-deck", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/weather-project-deck/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26142"
+BASE_PATH = "/weather-project-deck/"
